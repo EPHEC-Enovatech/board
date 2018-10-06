@@ -45,6 +45,7 @@
 #define loraSerial Serial1
 
 #define LightSensorPin A2
+#define AirSensorPin A0
 
 #define SEND_EVERY 60000
 
@@ -61,6 +62,7 @@ int digitalSensor = 20;  // Digital sensor is connected to pin D20/21
 
 //float soundValue;
 float lightValue;
+float airValue;
 float temp;
 float hum;
 
@@ -118,7 +120,10 @@ void loop()
 void initSensors()
 {
   debugSerial.println("Initializing sensors, this can take a few seconds...");
-  pinMode(LightSensorPin, INPUT);  
+  pinMode(LightSensorPin, INPUT);
+
+  pinMode(AirSensorPin, INPUT);
+
   tph.begin();
   // give some time to the sensors to init
   delay(500);
@@ -133,6 +138,8 @@ void readSensors()
     lightValue = analogRead(LightSensorPin);
     lightValue = lightValue * 3.3 / 1023;  // convert to lux based on the voltage that the sensor receives
     lightValue = pow(10, lightValue);
+
+    airValue = analogRead(AirSensorPin);
     
     temp = tph.readTemperature();
     hum = tph.readHumidity();    
@@ -154,6 +161,7 @@ void sendSensorValues()
   debugSerial.println("Start sending data to the Proximus EnCo platform");
   debugSerial.println("--------------------------------------------");
   container.addToQueue(lightValue, LIGHT_SENSOR, false); process();
+  container.addToQueue(airValue, AIR_QUALITY_SENSOR, false); process();
   container.addToQueue(temp, TEMPERATURE_SENSOR, false); process();
   container.addToQueue(hum, HUMIDITY_SENSOR, false); process();
   #endif
@@ -172,4 +180,8 @@ void displaySensorValues()
   debugSerial.print("Humidity: ");
   debugSerial.print(hum);
 	debugSerial.println(" %");
+
+  debugSerial.print("Air quality: ");
+  debugSerial.print(airValue);
+  debugSerial.println(" %");
 }
