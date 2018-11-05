@@ -44,10 +44,11 @@
 #define debugSerial Serial
 #define loraSerial Serial1
 
-#define LightSensorPin A2
+#define LightSensorPin A4
 #define AirSensorPin A0
+#define MoistureSensorPin A2
 
-#define SEND_EVERY 60000
+#define SEND_EVERY 100
 
 MicrochipLoRaModem modem(&loraSerial, &debugSerial);
 ATTDevice device(&modem, &debugSerial, false, 7000);  // minimum time between 2 messages set at 7000 milliseconds
@@ -59,20 +60,21 @@ ATTDevice device(&modem, &debugSerial, false, 7000);  // minimum time between 2 
 
 Adafruit_BME280 tph; // I2C
 int digitalSensor = 20;  // Digital sensor is connected to pin D20/21
+int relay = 4;
 
-//float soundValue;
+float soundValue;
 float lightValue;
 float airValue;
+int moistureValue;
 float temp;
 float hum;
+float pres;
 
 void setup() 
 {
   pinMode(digitalSensor, INPUT);  // Initialize the digital pin as an input
+  pinMode(relay, OUTPUT);
   delay(3000);
-
-  pinMode(GROVEPWR, OUTPUT);  // turn on the power for the secondary row of grove connectors
-  digitalWrite(GROVEPWR, HIGH);
 
   debugSerial.begin(SERIAL_BAUD);
   debugSerial.begin(SERIAL_BAUD);
@@ -102,15 +104,19 @@ void loop()
     prevButtonState = true;
     debugSerial.println("Button pressed");
     sensorVal = !sensorVal;
+    pinMode(GROVEPWR, OUTPUT);  // turn on the power for the secondary row of grove connectors
+    digitalWrite(GROVEPWR, HIGH);
     readSensors();
+    digitalWrite(GROVEPWR, LOW);
     displaySensorValues();
-    sendSensorValues();
+    //sendSensorValues();
   
     debugSerial.print("Sleeping for: ");
     debugSerial.println(SEND_EVERY);
     debugSerial.println();
     delay(SEND_EVERY);
     debugSerial.print("ARMED and Ready");
+    debugSerial.println("---------------------");
     debugSerial.println();
   }
   else if(sensorRead == 0)
@@ -120,9 +126,11 @@ void loop()
 void initSensors()
 {
   debugSerial.println("Initializing sensors, this can take a few seconds...");
-  pinMode(LightSensorPin, INPUT);
+  //pinMode(LightSensorPin, INPUT);
 
   pinMode(AirSensorPin, INPUT);
+
+  pinMode(MoistureSensorPin, INPUT);
 
   tph.begin();
   // give some time to the sensors to init
@@ -139,9 +147,22 @@ void readSensors()
     lightValue = lightValue * 3.3 / 1023;  // convert to lux based on the voltage that the sensor receives
     lightValue = pow(10, lightValue);
 
+    //la valeur est a déterminer selon la luminosité solaire.
+    if(lightValue < 10){
+      digitalWrite(relay, HIGH);
+      delay(100);
+    }else {
+      digitalWrite(relay, LOW);
+      delay(100);
+    }
+
     airValue = analogRead(AirSensorPin);
+
+    
+    moistureValue = analogRead(MoistureSensorPin);
     
     temp = tph.readTemperature();
+    pres = tph.readPressure();
     hum = tph.readHumidity();    
 }
 
@@ -162,7 +183,9 @@ void sendSensorValues()
   debugSerial.println("--------------------------------------------");
   container.addToQueue(lightValue, LIGHT_SENSOR, false); process();
   container.addToQueue(airValue, AIR_QUALITY_SENSOR, false); process();
+  container.addToQueue(moistureValue, INTEGER_SENSOR, false); process();
   container.addToQueue(temp, TEMPERATURE_SENSOR, false); process();
+  container.addToQueue(pres, PRESSURE_SENSOR, false); process();
   container.addToQueue(hum, HUMIDITY_SENSOR, false); process();
   #endif
 }
@@ -176,6 +199,10 @@ void displaySensorValues()
   debugSerial.print("Temperature: ");
   debugSerial.print(temp);
   debugSerial.println(" °C");
+
+  debugSerial.print("Pression: ");
+  debugSerial.print(pres);
+  debugSerial.println(" Pa");
       
   debugSerial.print("Humidity: ");
   debugSerial.print(hum);
@@ -183,5 +210,10 @@ void displaySensorValues()
 
   debugSerial.print("Air quality: ");
   debugSerial.print(airValue);
-  debugSerial.println(" %");
+  debugSerial.println(" AQI");
+
+  debugSerial.print("Moisture: ");
+  debugSerial.print(moistureValue);
+  debugSerial.println(" UM");
+  
 }
