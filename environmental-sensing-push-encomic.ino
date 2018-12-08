@@ -1,30 +1,4 @@
-/*    _   _ _ _____ _    _              _____     _ _     ___ ___  _  __
- *   /_\ | | |_   _| |_ (_)_ _  __ _ __|_   _|_ _| | |__ / __|   \| |/ /
- *  / _ \| | | | | | ' \| | ' \/ _` (_-< | |/ _` | | / / \__ \ |) | ' <
- * /_/ \_\_|_| |_| |_||_|_|_||_\__, /__/ |_|\__,_|_|_\_\ |___/___/|_|\_\
- *                             |___/
- *
- * Copyright 2018 AllThingsTalk
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 
-/*
- * Modified ATT Environmental sensing script by Proximus EnCo
- * Removed a couple of sensors to reduce the number of messages sent
- * The original environmental sensing script can be found in the AllThingsTalk RDK file
- */
- 
 // Select your preferred method of sending data
 #define CONTAINERS
 
@@ -48,7 +22,7 @@
 #define AirSensorPin A0
 #define MoistureSensorPin A2
 
-#define SEND_EVERY 100
+#define SEND_EVERY 60000
 
 MicrochipLoRaModem modem(&loraSerial, &debugSerial);
 ATTDevice device(&modem, &debugSerial, false, 7000);  // minimum time between 2 messages set at 7000 milliseconds
@@ -72,6 +46,7 @@ float pres;
 
 void setup() 
 {
+  
   pinMode(digitalSensor, INPUT);  // Initialize the digital pin as an input
   pinMode(relay, OUTPUT);
   delay(3000);
@@ -98,18 +73,12 @@ bool prevButtonState = false;
 
 void loop() 
 {
-  bool sensorRead = digitalRead(digitalSensor);     // Read status Digital Sensor
-  if (sensorRead == 1 && prevButtonState == false)  // Verify if value has changed
-  {
-    prevButtonState = true;
-    debugSerial.println("Button pressed");
-    sensorVal = !sensorVal;
     pinMode(GROVEPWR, OUTPUT);  // turn on the power for the secondary row of grove connectors
     digitalWrite(GROVEPWR, HIGH);
     readSensors();
     digitalWrite(GROVEPWR, LOW);
     displaySensorValues();
-    //sendSensorValues();
+    sendSensorValues();
   
     debugSerial.print("Sleeping for: ");
     debugSerial.println(SEND_EVERY);
@@ -118,9 +87,6 @@ void loop()
     debugSerial.print("ARMED and Ready");
     debugSerial.println("---------------------");
     debugSerial.println();
-  }
-  else if(sensorRead == 0)
-    prevButtonState = false;
 }
 
 void initSensors()
@@ -162,7 +128,7 @@ void readSensors()
     moistureValue = analogRead(MoistureSensorPin);
     
     temp = tph.readTemperature();
-    pres = tph.readPressure();
+    pres = tph.readPressure()/100;
     hum = tph.readHumidity();    
 }
 
@@ -178,6 +144,7 @@ void process()
 
 void sendSensorValues()
 {
+  
   #ifdef CONTAINERS
   debugSerial.println("Start sending data to the Proximus EnCo platform");
   debugSerial.println("--------------------------------------------");
@@ -202,7 +169,7 @@ void displaySensorValues()
 
   debugSerial.print("Pression: ");
   debugSerial.print(pres);
-  debugSerial.println(" Pa");
+  debugSerial.println(" hPa");
       
   debugSerial.print("Humidity: ");
   debugSerial.print(hum);
@@ -215,5 +182,5 @@ void displaySensorValues()
   debugSerial.print("Moisture: ");
   debugSerial.print(moistureValue);
   debugSerial.println(" UM");
-  
+    
 }
