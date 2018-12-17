@@ -22,7 +22,7 @@
 #define AirSensorPin A0
 #define MoistureSensorPin A2
 
-#define SEND_EVERY 60000
+#define SEND_EVERY 120000
 
 MicrochipLoRaModem modem(&loraSerial, &debugSerial);
 ATTDevice device(&modem, &debugSerial, false, 7000);  // minimum time between 2 messages set at 7000 milliseconds
@@ -68,31 +68,20 @@ void setup()
   initSensors();
 }
 
-bool sensorVal = false;
-bool prevButtonState = false;
-
 void loop() 
 {
     pinMode(GROVEPWR, OUTPUT);  // turn on the power for the secondary row of grove connectors
     digitalWrite(GROVEPWR, HIGH);
     readSensors();
     digitalWrite(GROVEPWR, LOW);
-    displaySensorValues();
+    //displaySensorValues();
     sendSensorValues();
-  
-    debugSerial.print("Sleeping for: ");
-    debugSerial.println(SEND_EVERY);
-    debugSerial.println();
-    delay(SEND_EVERY);
-    debugSerial.print("ARMED and Ready");
-    debugSerial.println("---------------------");
-    debugSerial.println();
 }
 
 void initSensors()
 {
   debugSerial.println("Initializing sensors, this can take a few seconds...");
-  //pinMode(LightSensorPin, INPUT);
+  pinMode(LightSensorPin, INPUT);
 
   pinMode(AirSensorPin, INPUT);
 
